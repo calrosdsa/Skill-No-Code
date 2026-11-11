@@ -5,7 +5,7 @@ Intent → tool. Exact arguments come from the live tool schema; this table only
 ## Discovery
 | Intent | Tool |
 |---|---|
-| Platform prose / section | `describe_platform [section]` |
+| Platform prose / section | `describe_platform [section]`; `describe_platform tool:<name>` returns the full parameter guidance for one tool (tool-list descriptions are short) |
 | Exact schema subtree | `describe_capabilities [section]` |
 | One workflow node / UI step | `describe_node_type` |
 | Reload cached knowledge | `refresh_knowledge` |
@@ -16,9 +16,9 @@ Intent → tool. Exact arguments come from the live tool schema; this table only
 | Intent | Tool | Note |
 |---|---|---|
 | List / read form | `list_forms`, `get_form` | `get_form` gives etag |
-| New form | `create_form` | default layout synthesized when no `layout` |
+| New form | `save_form` (no `form_id`) | default layout synthesized when no `layout` |
 | Targeted change | `edit_form` ops: `add_field`, `set_field`, `remove_field` (confirm), `set_setting`, `set_detail_tabs` | preferred |
-| Rename field, change type, restructure layout | `update_form` | full field list — an omitted field is **dropped with its data** |
+| Rename field, change type, restructure layout | `save_form` (`form_id` + `etag`, full replace) | full field list — an omitted field is **dropped with its data** |
 | Delete form | `delete_form` | after `find_references` + explicit approval |
 | Dependencies | `find_references id=<form>` or `<form-id>.<field>` | |
 | Validate expression | `validate_expression` | record rules, formulas, conditions |
@@ -33,9 +33,9 @@ Intent → tool. Exact arguments come from the live tool schema; this table only
 | Intent | Tool |
 |---|---|
 | List / read (compiled graph + flow + etag) | `list_workflows`, `get_workflow`, `get_workflow_history` |
-| New | `create_workflow` (FLOW form) |
+| New | `save_workflow` without `workflow_id` (FLOW form) |
 | Targeted | `edit_workflow` ops: `insert_step`, `update_step`, `remove_step`, `set_trigger`, `set_variables` |
-| Full replacement / free-form graph | `update_workflow` |
+| Full replacement / free-form graph | `save_workflow` (`workflow_id` + `etag`) |
 | Validate | `validate_workflow` (read warnings) |
 | Run (really executes) | `run_workflow` (`variables`, `trigger_record`) |
 | Observe | `list_executions`, `get_execution` |
@@ -45,14 +45,14 @@ Intent → tool. Exact arguments come from the live tool schema; this table only
 ## Navigation & UX
 | Intent | Tool |
 |---|---|
-| Menus | `list_menus`, `get_menu`, `create_menu`, `update_menu` (full), `delete_menu`, `reorder_menus` (complete sibling list) |
-| Dashboard tile change | `edit_dashboard` (never `update_menu` for one tile) |
+| Menus | `list_menus`, `get_menu`, `save_menu` (no id creates; `menu_id` + `etag` fully replaces), `delete_menu`, `reorder_menus` (complete sibling list) |
+| Dashboard tile change | `edit_dashboard` (never `save_menu` for one tile) |
 | Visibility check | `simulate_menu_visibility` (role_id, user, super_admin, anonymous) |
 | Mobile nav | `get_mobile_nav`, `update_mobile_nav` |
-| Saved views | `list_saved_views`, `create_saved_view`, `update_saved_view`, `delete_saved_view` |
+| Saved views | `list_saved_views`, `save_saved_view` (no id creates; `view_id` + optional `etag` from `list_saved_views` fully replaces), `delete_saved_view` |
 
 ## Reports
-`report_list`, `report_get` (→ `updated_at`), `report_create`, `report_update` (`expected_updated_at`), `report_validate`, `report_preview` (page images), `report_view` (live data), `report_render` (file), `report_publish`, `report_delete`, `report_craft_catalog`, `report_design_session`, `report_design_capture`, `report_image_*`.
+`report_list`, `report_get` (→ `updated_at`), `report_save` (no id creates; `report_id` + `expected_updated_at` fully replaces), `report_validate`, `report_preview` (page images), `report_view` (live data), `report_render` (file), `report_publish`, `report_delete`, `report_craft_catalog`, `report_design_session`, `report_design_capture`, `report_image_*`.
 
 ## Security & admin
 `list_roles`, `get_role`, `create_role`, `update_role` (prefer `add_permissions`/`remove_permissions`), `delete_role`, `list_permissions`; `assign_app_role`/`revoke_app_access` only when enabled (see discovery); `list_api_keys`, `set_api_key`, `revoke_api_key`; agents `list/get/create/update/delete_agent`; knowledge bases `list/create/update/delete_knowledge_base`, `add/list/delete_knowledge_document`.

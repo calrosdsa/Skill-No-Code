@@ -27,6 +27,27 @@ Open `describe_platform section=workflows` (node list with NOT-for lines, exampl
 
 Live modes save disabled unless the key holds `workflows:activate`. Carry `enabled` through every trigger edit.
 
+## Choosing nodes for list data (sync, import, ETL)
+
+Decide by the shape of the work, before reaching for `foreach`:
+
+| Work | Use | Not |
+|---|---|---|
+| Map a list (API response, fetched records) onto a form's fields | `transform` (one step, per-item mappings, output list) | `foreach` + `set_variable` per item |
+| Insert/update a whole list on one form | `save_records` (matches on the form's unique fields; `atomic: true` ≤200 rows) | `foreach` + `upsert_records` per row |
+| Related writes across forms that must commit together | `write_batch` (≤200 rows) | separate write nodes |
+| One mapped list from nested data (parents × children) | flatten in `transform.source_expr`, e.g. `flatten(map(P, (let k = #.key; map(#.children, ({"k": k, "c": #})))))` | nested `foreach` |
+| Per-item side effects that differ (HTTP per item, branching per row) | `foreach` with `max_iters` and `continue_on_error` | — |
+| External API that accepts many ids per call | batch ids per call (multi_read) and chunk the list (`map(0..int((n-1)/size), list[#*size : min(#*size+size, n)])`) | one HTTP call per item |
+
+Rules:
+- A `foreach` whose body is only map + write is the anti-pattern: each iteration is a separate engine step. Replace it with `transform` → `save_records`. Typical result: N steps become 2.
+- `save_records` needs a **unique** field on the target form, with a deterministic value derived from the source (e.g. `person|date|type|vendor_id`), so reruns update instead of duplicating. Check `get_form` for `unique: true` first.
+- Need ids back (e.g. to link children)? Set `output_var` on `save_records`, then `map(Vars["saved"], ({"key": #.key, "id": #.id}))`.
+- Wrap map literals inside closures in parentheses `({...})`. Use `concat(a, b)` (or `+` on engine ≥ 65ce5634) to append lists. Avoid `fromPairs` into an `object` var on older engines. Prefer `first(filter(list, #.k == x))` for a lookup.
+- Watch tenant concurrency: each subflow call holds an execution slot. Chunk work per subflow call, and don't fan out.
+- Verify with `run_workflow` mode `test`: `test_report.writes` should show `node_type: save_records` rows, not one upsert per iteration.
+
 ## Semantics that change designs
 
 - `human_task` creates a durable task and **continues immediately**. The response arrives in a separate `task_completed` workflow. Never model "wait for approval" inside one run.

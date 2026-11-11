@@ -21,12 +21,12 @@ Menus: module "Loans" → search Equipment, search Loans, add Loan; Borrower see
 ## MCP sequence
 
 1. `get_application`, `describe_platform forms`, `describe_capabilities forms.field_types`, `describe_node_type trigger`, `describe_node_type email`.
-2. `create_form` ×3 (Equipment, Borrower, then Loan referencing their ids) → `get_form` each.
+2. `save_form` (no id) ×3 (Equipment, Borrower, then Loan referencing their ids) → `get_form` each.
 3. `validate_expression` for the record rule → `edit_form set_setting validation_rules`.
 4. `list_roles` → create roles only if absent (`create_role`) — admin profile + approval.
 5. `edit_form set_setting access_scope` on Loan → `get_form` readback.
-6. `create_workflow` (date trigger) → `validate_workflow` → note `enabled:false`.
-7. `create_menu` ×N → `simulate_menu_visibility` per role.
+6. `save_workflow` (no id; date trigger) → `validate_workflow` → note `enabled:false`.
+7. `save_menu` (no id) ×N → `simulate_menu_visibility` per role.
 8. Test with `TEST-` records: rule rejection, `run_workflow trigger_record` with a test email.
 9. `save_version` → report issues. Publish only if asked.
 

@@ -19,6 +19,9 @@
 | Circular dependency | subflow call cycle; trigger cascade loop (A writes X, X-trigger writes Y, Y-trigger writes X) | break with state guard / `was_updated` filter / redesign |
 | Unbounded loop | `foreach` without `max_iters` over a growing query | bounded batches + checkpoint |
 | N+1 queries | `fetch_records` inside a `foreach` | fetch once with `in` filter, map in memory |
+| Row-by-row writes | `foreach` whose body is only map + `upsert_records`/`create_records` | `transform` → `save_records` (unique key on target form) |
+| Per-item API calls | one `http_request` per item where the API has a multi_read/bulk endpoint | chunk ids (e.g. 100) per call, one subflow per chunk |
+| Silent loop errors | `continue_on_error` loop with no failure accounting (`+` on lists, bad paths fail quietly) | pre-count failure before the risky step, undo on success; read child executions in test runs |
 | Full scans | filters on non-indexed fields of large forms; scheduled job without watermark | `index: true`; incremental cursor |
 | Missing transaction boundary | multi-form related writes in separate nodes | `write_batch` |
 | Blind retries | `retry` on non-idempotent POST; on_error re-running whole workflow | idempotency keys; retry one level |

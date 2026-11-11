@@ -3,7 +3,7 @@
 ## The cycle
 
 1. **Read** the current definition (`get_form` / `get_workflow` / `get_menu` / `report_get` / `get_role`).
-2. **Capture the guard**: `etag` (forms, workflows, menus) or `updated_at` → `expected_updated_at` (reports). Records patch and have no design etag.
+2. **Capture the guard**: `etag` (forms, workflows, menus, saved views from `list_saved_views`) or `updated_at` → `expected_updated_at` (reports). Records patch and have no design etag.
 3. **Analyze consumers**: `find_references` (both directions) for anything renamed, retyped, removed or whose contract changes. Respect its stated coverage; check external callers/exports yourself.
 4. **Prefer targeted edits**: `edit_form`, `edit_workflow`, `edit_dashboard`, `edit_translations`, `update_role` deltas.
 5. **Preserve** unrelated fields, column ids, layout, rules, permissions, trigger `enabled` state.
@@ -14,16 +14,16 @@
 
 ## Full replacement rules
 
-- `update_form`: send the **complete** field list. An omitted field is dropped together with its column and stored data. Keep every `column` id. To rename, keep the column and change the name. Settings you omit are carried forward by the server; fields are not.
-- `update_workflow`: send the full definition based on `get_workflow`'s compiled graph. A trigger config is replaced wholesale — carry `enabled` forward from the top-level `enabled` read, or the trigger silently becomes disabled.
-- `update_menu`: full replacement of that menu. For one dashboard tile use `edit_dashboard`.
+- `save_form` with `form_id` + `etag` (update): send the **complete** field list. An omitted field is dropped together with its column and stored data. Keep every `column` id. To rename, keep the column and change the name. Settings you omit are carried forward by the server; fields are not.
+- `save_workflow` with `workflow_id` + `etag` (update): send the full definition based on `get_workflow`'s compiled graph. A trigger config is replaced wholesale — carry `enabled` forward from the top-level `enabled` read, or the trigger silently becomes disabled.
+- `save_menu` with `menu_id` + `etag` (update): full replacement of that menu. For one dashboard tile use `edit_dashboard`.
 - `reorder_menus`: the complete child list of one parent.
 - `update_role`: `permissions` replaces the whole list; prefer `add_permissions` / `remove_permissions`. A removed key can still be granted by a wildcard — check.
 
 ## Concurrency
 
-- Pass the etag from your read. A `stale_etag`/412 (or report 409) means someone else saved. **Re-read**, look at what changed, re-apply only your intended change to the fresh state, and re-verify that nothing of theirs is lost. Never replay the failed body.
-- `update_form` without an etag still guards its own internal read-merge-write, but only your etag protects your *intent* against a human editing in the builder since your read.
+- Pass the etag from your read. A `stale_etag` (HTTP 412; reports surface a stale `expected_updated_at` as `stale_etag` too) means someone else saved. **Re-read**, look at what changed, re-apply only your intended change to the fresh state, and re-verify that nothing of theirs is lost. Never replay the failed body.
+- `save_form` without an etag still guards its own internal read-merge-write, but only your etag protects your *intent* against a human editing in the builder since your read.
 
 ## Errors
 

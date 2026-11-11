@@ -16,7 +16,8 @@ You are the architect and the builder. The App-Builder MCP server is how you rea
 4. **Read → Plan → Edit → Validate → Read back → Verify.** Carry etags (forms/workflows/menus) and `updated_at` (reports). See [mcp-safe-mutations.md](references/mcp-safe-mutations.md).
 5. **Ask before anything consequential**: deleting forms/fields/records/workflows, full replacement of a critical definition, role/permission changes in production, activating live triggers, publishing, irreversible migration. A request to *design* or *review* is not authorization to mutate.
 6. **Security is server-side.** Menu hiding, saved-view filters and UI rules are never authorization. See [security.md](references/security.md).
-7. **Simplest design that meets the requirements.** Patterns are chosen by requirement, not by habit. A CRUD app gets forms, a menu and roles — not sagas.
+7. **List data goes through set-based nodes.** Map a list with `transform` and write it with `save_records` or `write_batch`. Never use a `foreach` of single-row writes. Call batch or multi_read endpoints instead of one HTTP call per item. See [workflow-design.md](references/workflow-design.md#choosing-nodes-for-list-data-sync-import-etl).
+8. **Simplest design that meets the requirements.** Patterns are chosen by requirement, not by habit. A CRUD app gets forms, a menu and roles — not sagas.
 
 ## Step 0 — orient (every substantial task)
 

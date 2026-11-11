@@ -54,7 +54,7 @@ So: don't hand-edit layout rule blocks unless you mean to; after complex changes
 | form setting incl. `access_scope`, `validation_rules`, `submittable` | `edit_form set_setting` |
 | detail tabs | `edit_form set_detail_tabs` |
 | remove field (destroys data) | `find_references <form>.<field>` → approval → `edit_form remove_field confirm=<name>`; fix dependants yourself — they are not rewritten |
-| rename, change type, restructure layout | `update_form` with the **complete** field list, keeping `column` ids |
+| rename, change type, restructure layout | `save_form` (`form_id` + `etag`) with the **complete** field list, keeping `column` ids |
 
 ## Schema migration (existing data)
 

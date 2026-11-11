@@ -49,7 +49,7 @@ Before any step reads an `http_request` response: confirm the real shape from wo
 - Mark capability assumptions as "documented in source snapshot, not live-verified".
 - Provide the MCP implementation plan so it can be executed once connected.
 
-## Known discrepancies (observed 2026-11-08; re-verify, they may be fixed)
+## Known discrepancies (observed 2026-11-08, re-checked 2026-11-11; re-verify, they may be fixed)
 
 | Observation | Classification |
 |---|---|
@@ -60,3 +60,62 @@ Before any step reads an `http_request` response: confirm the real shape from wo
 | `simulate_viewer` resolves identity and enrollment profiles only; no tool shows which *records* a given role/user would see under `access_scope`. | `PLATFORM_DX` — test row security with real test users or reasoning, and say which |
 | `hide_rules` audience `specific_people` needs platform user ids; no tool lists users. | Documented `PLATFORM_DX` |
 | `find_references` does not cover external callers or exports. | Documented coverage limit — check those manually |
+
+## Server behaviour to rely on (verified live 2026-11-11)
+
+- **Tool profile decides what you see.** A server on the `design` profile exposes about 62 tools (no record, role, API-key or evaluation tools); `all` exposes about 103. If a tool family is missing, check the profile before calling it a platform gap.
+- **"Not configured" is a 501, not an outage.** When a feature's backing config is missing (e.g. report images or rendering without file storage or craft CLIs), the tool returns HTTP 501 with the engine message naming what is missing, `retryable=false`. Do not retry; report it as a `CONFIG_BLOCKER`. Other 5xx bodies are blanked on purpose — treat them as server errors and report the status, not a guess.
+- **Empty report tables keep their shape.** `report_view` table blocks always carry `rows` (`[]` when empty) and `total_rows`.
+- **Formula privacy warnings are real.** `save_form` / `edit_form` warn when a formula reads a field that some roles cannot see (e.g. `hide_rules`). "Formula privacy check unavailable" means the check failed server-side — log it as a bug, do not ignore it.
+- **Guide facts:** a boolean field `default` is a JSON boolean; new fields go through `edit_form` `add_field`; `get_workflow detail:full` returns `flow` when it fully represents the workflow and `save_workflow` accepts either `flow` or `definition`; one credential may reach several apps (`list_apps`, then `select_app`); WhatsApp exists only as `whatsapp_*` nodes from an installed package; form-scoped triggers scope by `source_form_id`.
+
+## Compact response profile
+
+Enable `APP_BUILDER_MCP_RESPONSE_PROFILE=compact-v1` in the environment of the
+server instance the client connects to. It enables compact descriptions and
+defaults resource ID schemas to string. Keep the variable unset or use
+`legacy` for existing response shapes. The separate tool scope
+(`all`, `design`, `data`, `admin`, `evaluation`) still controls discovery.
+
+| Need | Read |
+| --- | --- |
+| Form structure and validation | `get_form` standard returns fields and `layout_outline`. Summary returns identity, counts and field references. |
+| One canvas component or form field | `get_form` with `component_ids` (canvas IDs or field keys). A matching field comes back alongside its canvas element when present. |
+| Workflow topology | `get_workflow` standard returns topology, trigger and condition outlines. Summary returns identity and counts. |
+| One workflow node | `get_workflow` with `node_ids` for full matching configurations, or `node_query` for an exact ID, label or type. Multiple matches return candidate IDs. Older flow-only backends return matching steps and a flow outline for standard reads. |
+| Diagnose a failed execution | `get_execution` standard returns complete errors, node statuses and timings. For a test run it includes the complete `test_report`. |
+| Inspect one step's logged data | `get_execution` with `step_id` and `step_payload: "input"`, `"output"` or `"both"`. Follow `next_page` for more attempts. |
+| Read full source | `detail: "full"` gives the existing form, workflow, execution, report or app representation. Add `include_node_outputs: true` only when you need the legacy bulk log view. |
+| Read specific keys | `fields` selects top-level keys from the full object. Identity and concurrency fields stay. Choose either `fields` or an item selector. Item selectors return full matching items and take precedence over `detail`. |
+
+List forms and workflows by `query` and continue with `next_cursor`. Use the
+same filters with `cursor` in `list_executions` and `search_records`.
+Search keeps the backend's filter and sort behavior and accepts `fields` for
+record keys. `include_total: true` adds the matching count. Record cursors
+continue by page, so concurrent writes can change the next page. Use
+`detail: "full"` with `page` and `page_size` to get the legacy search shape.
+
+For navigation, `list_menus` returns a 25-item outline with parent IDs,
+sort order, access gates and form, report or dashboard targets. Use
+`query` to find a menu and `get_menu` for its full config and etag.
+`list_saved_views` pages the selected menu's views and keeps each complete
+config, `can_manage` and `etag`. Use `view_id` for one view or `detail: "summary"`
+for a smaller inventory. Continue with the same app or menu and query.
+`detail: "full"` without filters or pagination returns the legacy array.
+
+Use `edit_form` or `edit_workflow` for a targeted change and carry the exact
+`etag`. Read `detail: "full"` before a replacement. For report draft updates,
+carry `report_get.updated_at` as `expected_updated_at`. Form, workflow and
+report create/update tools return receipts in compact mode. Request
+`detail: "full"` on the write or fetch the saved resource to inspect its full
+definition. Workflow edits that may generate step IDs retain the saved flow. Read errors, validation details and warnings before proceeding.
+
+Bulk execution outputs can hit the existing log cap. Compact mode adds
+`truncation` metadata with log counts and the targeted retrieval path.
+A projection selects fields or items without shortening stored values.
+
+`describe_platform` returns a short index. Use `section` for a focused guide,
+or `tool` for the complete authoring guidance for a visible tool, for example
+`{"tool":"report_save"}`. Use `describe_capabilities` for exact platform
+schemas and `describe_node_type` for one node configuration. Claude Code Tool
+Search can load supported MCP definitions on demand.

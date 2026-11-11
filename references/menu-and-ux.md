@@ -28,7 +28,7 @@ A menu is visible only if its own gates **and every ancestor's** pass: `required
 
 - Gate a section once, on its parent.
 - `reorder_menus` needs the complete child list of one parent.
-- `update_menu` replaces the whole menu; for a dashboard tile use `edit_dashboard set_widget`.
+- `save_menu` with `menu_id` + `etag` replaces the whole menu; for a dashboard tile use `edit_dashboard set_widget`.
 - Dashboard "my X" tiles use `value_mode: current_user` with qualified profile values; set `ignoreMissingProfile` when viewers may lack a profile.
 - Saved views shared by others can be changed only by their owner or `menus:write` holders.
 
